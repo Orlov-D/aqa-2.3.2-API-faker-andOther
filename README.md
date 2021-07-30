@@ -1,4 +1,4 @@
-
+[![Build status](https://ci.appveyor.com/api/projects/status/vdaq68lu6v4gcrcq?svg=true)](https://ci.appveyor.com/project/Orlov-D/aqa-2-3-2-api-faker-andother)
 
 <!--
 java -jar artifacts/app-ibank.jar -P:profile=test
