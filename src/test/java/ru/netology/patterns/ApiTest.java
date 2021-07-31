@@ -1,46 +1,72 @@
 package ru.netology.patterns;
 
-import com.google.gson.Gson;
-import io.restassured.builder.RequestSpecBuilder;
-import io.restassured.filter.log.LogDetail;
-import io.restassured.http.ContentType;
-import io.restassured.specification.RequestSpecification;
-import org.junit.jupiter.api.BeforeAll;
+import com.codeborne.selenide.Condition;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-import static io.restassured.RestAssured.given;
+import static com.codeborne.selenide.Selenide.*;
+import static com.codeborne.selenide.Condition.*;
+import static ru.netology.patterns.DataGenerator.Registration.*;
+import static ru.netology.patterns.DataGenerator.*;
+
 
 public class ApiTest {
 
-    public static class User {
-        private  String login="vasya";
-        private  String password="password";
-        private  String status="active";
+    @BeforeEach
+    public void setUpAll() {
+        open("http://localhost:9999");
     }
 
-        private static RequestSpecification requestSpec = new RequestSpecBuilder()
-                .setBaseUri("http://localhost")
-                .setPort(9999)
-                .setAccept(ContentType.JSON)
-                .setContentType(ContentType.JSON)
-                .log(LogDetail.ALL)
-                .build();
+    @Test
+    @DisplayName("Should successfully login with active registered user")
+    void shouldSuccessfulLoginIfRegisteredActiveUser() {
+        var registeredUser = getRegisteredUser("active");
+        $("[name=login]").setValue(registeredUser.getLogin());
+        $("[name=password]").setValue(registeredUser.getPassword());
+        $("[data-test-id=action-login]").click();
+        $(".heading").shouldHave(Condition.exactText("  Личный кабинет"));
+    }
 
-        @BeforeAll
-        static void setUpAll() {
-            Gson gson = new Gson();
-            User user = new User();
-            given() // "дано"
-                    .spec(requestSpec) // указываем, какую спецификацию используем
-                    .body(gson.toJson(user)) // передаём в теле объект, который будет преобразован в JSON
-            .when() // "когда"
-                    .post("/api/system/users") // на какой путь, относительно BaseUri отправляем запрос
-            .then() // "тогда ожидаем"
-                    .statusCode(200); // код 200 OK
-        }
-//    ToDo ...
-@Test
-    public void Pip(){
-//уже 35 мин
-}
+    @Test
+    @DisplayName("Should get error message if login with not registered user")
+    void shouldGetErrorIfNotRegisteredUser() {
+        var notRegisteredUser = getUser("active");
+        $("[name=login]").setValue(notRegisteredUser.getLogin());
+        $("[name=password]").setValue(notRegisteredUser.getPassword());
+        $("[data-test-id=action-login]").click();
+        $(".notification__content").shouldBe(visible).shouldHave(Condition.exactText("Ошибка! Неверно указан логин или пароль"));
+    }
+
+    @Test
+    @DisplayName("Should get error message if login with blocked registered user")
+    void shouldGetErrorIfBlockedUser() {
+        var blockedUser = getRegisteredUser("blocked");
+        $("[name=login]").setValue(blockedUser.getLogin());
+        $("[name=password]").setValue(blockedUser.getPassword());
+        $("[data-test-id=action-login]").click();
+        $(".notification__content").shouldBe(visible).shouldHave(Condition.exactText("Ошибка! Пользователь заблокирован"));
+    }
+
+    @Test
+    @DisplayName("Should get error message if login with wrong login")
+    void shouldGetErrorIfWrongLogin() {
+        var registeredUser = getRegisteredUser("active");
+        var wrongLogin = getRandomLogin();
+        $("[name=login]").setValue(wrongLogin);
+        $("[name=password]").setValue(registeredUser.getPassword());
+        $("[data-test-id=action-login]").click();
+        $(".notification__content").shouldBe(visible).shouldHave(Condition.exactText("Ошибка! Неверно указан логин или пароль"));
+    }
+
+    @Test
+    @DisplayName("Should get error message if login with wrong password")
+    void shouldGetErrorIfWrongPassword() {
+        var registeredUser = getRegisteredUser("active");
+        var wrongPassword = getRandomPassword();
+        $("[name=login]").setValue(registeredUser.getLogin());
+        $("[name=password]").setValue(wrongPassword);
+        $("[data-test-id=action-login]").click();
+        $(".notification__content").shouldBe(visible).shouldHave(Condition.exactText("Ошибка! Неверно указан логин или пароль"));
+    }
 }
